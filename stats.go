@@ -103,7 +103,7 @@ type queueMessage struct {
 
 type identifierStatus struct {
 	Status  bool                   `json:"status"`
-	Error   string                 `json:"error"`
+	Error   error                  `json:"error"`
 	Details map[string]interface{} `json:"details"`
 }
 
@@ -118,16 +118,19 @@ func CheckQueueData(w http.ResponseWriter, req *http.Request) {
 	decoder := json.NewDecoder(req.Body)
 	err := decoder.Decode(&payload)
 	if err != nil {
-		response.Error = err.Error()
+		response.Error = err
 		return
 	}
-	response.Status, response.Details = IdentifierInQueue(payload.Queue, payload.Identifier)
+	response.Status, response.Details, response.Error = IdentifierInQueue(payload.Queue, payload.Identifier)
+	if !response.Status {
+		response.Status, response.Details, response.Error = CheckIdentifierInRetry(payload.Identifier)
+	}
 	body, _ := json.Marshal(response)
 	fmt.Fprintln(w, string(body))
 }
 
-// IdentifierInQueue checks whether identifier is present in message of queue
-func IdentifierInQueue(srcQueue, identifier string) (bool, map[string]interface{}) {
+// IdentifierInQueue checks whether identifier is present in message of worker queue
+func IdentifierInQueue(srcQueue, identifier string) (bool, map[string]interface{}, error) {
 	for _, m := range managers {
 		queue := m.queueName()
 		if queue == srcQueue {
@@ -135,18 +138,52 @@ func IdentifierInQueue(srcQueue, identifier string) (bool, map[string]interface{
 				message := worker.currentMsg
 				startedAt := worker.startedAt
 				if message != nil && startedAt > 0 {
-					args, _ := message.Args().Array() // nolint: gosec
+					args, err := message.Args().Array()
+					if err != nil {
+						return false, nil, err
+					}
 					for _, arg := range args {
 						if arg == identifier {
-							return true, map[string]interface{}{
+							return false, map[string]interface{}{
 								"message":    message,
 								"started_at": startedAt,
-							}
+							}, nil
 						}
 					}
 				}
 			}
 		}
 	}
-	return false, nil
+	return false, nil, nil
+}
+
+// CheckIdentifierInRetry checks whether identifier is present in retry queue
+func CheckIdentifierInRetry(identifier string) (bool, map[string]interface{}, error) {
+	conn := Config.Pool.Get()
+	defer conn.Close()
+	conn.Send("multi")
+	conn.Send("ZRANGE", Config.Namespace+RETRY_KEY, 0, -1)
+	r, err := conn.Do("exec")
+	if err != nil {
+		return false, nil, err
+	}
+	results := r.([]interface{})
+
+	var object map[string]interface{}
+	for _, alpha := range results[0].([]interface{}) {
+		err = json.Unmarshal(alpha.([]byte), &object)
+		if err != nil {
+			return false, nil, err
+		}
+		if args, ok := object["args"]; ok {
+			for _, arg := range args.([]interface{}) {
+				if arg.(string) == identifier {
+					return false, map[string]interface{}{
+						"message": object,
+					}, nil
+				}
+			}
+		}
+	}
+	return false, nil, nil
 }
