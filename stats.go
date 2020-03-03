@@ -144,7 +144,7 @@ func IdentifierInQueue(srcQueue, identifier string) (bool, map[string]interface{
 					}
 					for _, arg := range args {
 						if arg == identifier {
-							return false, map[string]interface{}{
+							return true, map[string]interface{}{
 								"message":    message,
 								"started_at": startedAt,
 							}, nil
@@ -179,7 +179,7 @@ func CheckIdentifierInRetry(identifier string) (bool, map[string]interface{}, er
 		if args, ok := object["args"]; ok {
 			for _, arg := range args.([]interface{}) {
 				if arg.(string) == identifier {
-					return false, map[string]interface{}{
+					return true, map[string]interface{}{
 						"message": object,
 					}, nil
 				}
