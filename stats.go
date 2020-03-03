@@ -95,3 +95,59 @@ func Stats(w http.ResponseWriter, req *http.Request) {
 	body, _ := json.MarshalIndent(stats, "", "  ")
 	fmt.Fprintln(w, string(body))
 }
+
+type queueMessage struct {
+	Queue      string `json:"queue"`
+	Identifier string `json:"identifier"`
+}
+
+type identifierStatus struct {
+	Status  bool                   `json:"status"`
+	Error   string                 `json:"error"`
+	Details map[string]interface{} `json:"details"`
+}
+
+// CheckQueueData checks whether identifier is part of args in messages in queue
+func CheckQueueData(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	var payload queueMessage
+	response := identifierStatus{Status: false}
+
+	decoder := json.NewDecoder(req.Body)
+	err := decoder.Decode(&payload)
+	if err != nil {
+		response.Error = err.Error()
+		return
+	}
+	response.Status, response.Details = IdentifierInQueue(payload.Queue, payload.Identifier)
+	body, _ := json.Marshal(response)
+	fmt.Fprintln(w, string(body))
+}
+
+// IdentifierInQueue checks whether identifier is present in message of queue
+func IdentifierInQueue(queue, identifier string) bool, map[string]interface{} {
+	for _, m := range managers {
+		queue := m.queueName()
+		if queue == payload.Queue {
+			for _, worker := range m.workers {
+				message := worker.currentMsg
+				startedAt := worker.startedAt
+				if message != nil && startedAt > 0 {
+					args, _ := message.Args().Array() // nolint: gosec
+
+					for _, arg := range args {
+						if arg == payload.Identifier {
+							return true, &map[string]interface{}{
+								"message":    message,
+								"started_at": startedAt,
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return false, nil
+}
