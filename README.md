@@ -18,7 +18,7 @@ Example usage:
 package main
 
 import (
-	"github.com/jrallison/go-workers"
+	"github.com/Pasarpolis/go-worker"
 )
 
 func myJob(message *workers.Msg) {
@@ -63,11 +63,11 @@ func main() {
   workers.EnqueueWithOptions("myqueue3", "Add", []int{1, 2}, workers.EnqueueOptions{Retry: true})
 
   // stats will be available at http://localhost:8080/stats
+  // queue lookup is available at POST http://localhost:8080/identifier-lookup
   go workers.StatsServer(8080)
+
 
   // Blocks until process is told to exit via unix signal
   workers.Run()
 }
 ```
-
-Initial development sponsored by [Customer.io](http://customer.io)
