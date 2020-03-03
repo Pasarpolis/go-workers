@@ -127,19 +127,18 @@ func CheckQueueData(w http.ResponseWriter, req *http.Request) {
 }
 
 // IdentifierInQueue checks whether identifier is present in message of queue
-func IdentifierInQueue(queue, identifier string) bool, map[string]interface{} {
+func IdentifierInQueue(srcQueue, identifier string) (bool, map[string]interface{}) {
 	for _, m := range managers {
 		queue := m.queueName()
-		if queue == payload.Queue {
+		if queue == srcQueue {
 			for _, worker := range m.workers {
 				message := worker.currentMsg
 				startedAt := worker.startedAt
 				if message != nil && startedAt > 0 {
 					args, _ := message.Args().Array() // nolint: gosec
-
 					for _, arg := range args {
-						if arg == payload.Identifier {
-							return true, &map[string]interface{}{
+						if arg == identifier {
+							return true, map[string]interface{}{
 								"message":    message,
 								"started_at": startedAt,
 							}
