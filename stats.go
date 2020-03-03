@@ -158,6 +158,7 @@ func IdentifierInQueue(srcQueue, identifier string) (bool, map[string]interface{
 }
 
 // CheckIdentifierInRetry checks whether identifier is present in retry queue
+// Caution: In case of large retry queue, this function can be slow
 func CheckIdentifierInRetry(identifier string) (bool, map[string]interface{}, error) {
 	conn := Config.Pool.Get()
 	defer conn.Close()

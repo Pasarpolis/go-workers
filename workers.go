@@ -90,6 +90,7 @@ func StatsServer(port int) {
 	http.HandleFunc("/identifier-lookup", CheckQueueData)
 
 	Logger.Println("Stats are available at", fmt.Sprint("http://localhost:", port, "/stats"))
+	Logger.Println("Lookup of identifier in args available at", fmt.Sprint("http://localhost:", port, "/identifier-lookup"), "\nCaution: In case of large retry queues, this api can be slow")
 
 	if err := http.ListenAndServe(fmt.Sprint(":", port), nil); err != nil {
 		Logger.Println(err)
