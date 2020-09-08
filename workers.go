@@ -36,10 +36,9 @@ func Process(queue string, job jobFunc, concurrency int, mids ...Action) {
 }
 
 func AddProcess(queue string, job jobFunc, concurrency int, mids ...Action) {
-	access.Lock()
-	defer access.Unlock()
-
-	if _, ok := managers[queue]; !ok {
+	if _, ok := managers[queue]; !ok && started {
+		access.Lock()
+		defer access.Unlock()
 		managers[queue] = newManager(queue, job, concurrency, mids...)
 		runHooks(beforeStart)
 		managers[queue].start()
