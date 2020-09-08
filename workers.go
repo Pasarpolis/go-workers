@@ -43,8 +43,6 @@ func AddProcess(queue string, job jobFunc, concurrency int, mids ...Action) {
 		managers[queue] = newManager(queue, job, concurrency, mids...)
 		runHooks(beforeStart)
 		managers[queue].start()
-	} else {
-		log.Println("already added")
 	}
 }
 
